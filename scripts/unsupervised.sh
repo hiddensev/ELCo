@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Please define your own path here
-huggingface_path=YOUR_PATH
+huggingface_path=~/Workspace/hg-cache
 
 for model_name in bert-base roberta-base roberta-large bart-large
 do

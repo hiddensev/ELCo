@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Please define your own path here
-huggingface_path=YOUR_PATH
+huggingface_path=~/Workspace/hg-cache
 
-for model_name in bert-base roberta-base roberta-large bart-large
+for model_name in roberta-large bart-large # bert-base roberta-base 
 do
-    for seed in 43 44 45 46 47
+    for seed in 43
     do
-        CUDA_VISIBLE_DEVICES=1 python scripts/emote.py --finetune 1 --model_name $model_name --portion 1 --seed $seed --hfpath $huggingface_path
+        CUDA_VISIBLE_DEVICES=0 python scripts/emote.py --finetune 1 --model_name $model_name --portion 1 --seed $seed --hfpath $huggingface_path
     done
 done
