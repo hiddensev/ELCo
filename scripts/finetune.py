@@ -63,7 +63,6 @@ class EmoteTrainer:
                 small_dict['Semantic list'] = test_acc_strategy[2]
                 small_dict['Reduplication'] = test_acc_strategy[3]
                 small_dict['Single'] = test_acc_strategy[4]
-                small_dict['Negative'] = test_acc_strategy[5]
                 # save it into a csv
                 with open(self.fp_csv_best, 'w') as f:
                     f.write('strategy,accuracy\n')

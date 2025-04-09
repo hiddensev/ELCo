@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Please define your own path here
-huggingface_path=~/Workspace/hg-cache
+huggingface_path=/workspace/ELCo/huggingface
 
-for model_name in roberta-large bart-large # bert-base roberta-base 
+for model_name in bert-base
 do
     for seed in 43
     do
