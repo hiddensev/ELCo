@@ -44,6 +44,7 @@ class EmoteTrainer:
         self.fp_txt = '{}/portion_{}_seed_{}.txt'.format(self.save_dir, self.portion, self.seed)
         self.fp_csv = '{}/portion_{}_seed_{}.csv'.format(self.save_dir, self.portion, self.seed)
         self.fp_csv_best = '{}/portion_{}_seed_{}_best.csv'.format(self.save_dir, self.portion, self.seed)
+        self.fp_incorrect = '{}/portion_{}_seed_{}_incorrect.csv'.format(self.save_dir, self.portion, self.seed)
 
     def train(self, epochs):
         for epoch in range(epochs):
@@ -104,8 +105,15 @@ class EmoteTrainer:
         predictions, true_labels, strategy_types = [], [], []
         strategies_correct = [0]*7
         strategies_total = [0]*7
+        
+        # Lists to store incorrect predictions
+        incorrect_indices = []
+        incorrect_predictions = []
+        incorrect_true_labels = []
+        incorrect_strategies = []
+        incorrect_texts = []  # To store the actual text pairs
 
-        for batch in loader:
+        for batch_idx, batch in enumerate(loader):
             # Separate strategies from the rest of the batch data
             strategies = batch.pop('strategies').to(self.device)
 
@@ -129,6 +137,26 @@ class EmoteTrainer:
 
             current_true_labels = batch['labels'].cpu().numpy().tolist()
             current_strategies = strategies.cpu().numpy().tolist()
+            current_preds = preds.cpu().numpy().tolist()
+            
+            # Record incorrect predictions
+            for i in range(len(current_preds)):
+                if current_preds[i] != current_true_labels[i]:
+                    # Calculate the global index
+                    global_idx = batch_idx * self.batch_size + i
+                    incorrect_indices.append(global_idx)
+                    incorrect_predictions.append(current_preds[i])
+                    incorrect_true_labels.append(current_true_labels[i])
+                    incorrect_strategies.append(current_strategies[i])
+                    
+                    # Get the text pairs if available
+                    if 'input_ids' in batch:
+                        # Decode the input_ids to get the text
+                        input_ids = batch['input_ids'][i].cpu().numpy()
+                        text = self.tokenizer.decode(input_ids, skip_special_tokens=True)
+                        incorrect_texts.append(text)
+                    else:
+                        incorrect_texts.append("Text not available")
 
             for i in range(len(preds)):
                 strategies_total[current_strategies[i]] += 1
@@ -156,7 +184,25 @@ class EmoteTrainer:
                 for idx in range(len(predictions)):
                     f.write('{},{},{},{}\n'.format(idx, predictions[idx], true_labels[idx], strategy_types[idx]))
             print('write predictions into {}'.format(self.fp_csv))
+            
+            # Write incorrect predictions to a separate file
+            if incorrect_indices:
+                with open(self.fp_incorrect, 'a') as f:
+                    f.write('\n*** Epoch: {} - {} ***\n'.format(epoch+1, str_))
+                    f.write('idx,pred,true,strategy,strategy_name,text\n')
+                    for i in range(len(incorrect_indices)):
+                        strategy_name = self.strategy_map_inverted.get(incorrect_strategies[i], "Unknown")
+                        f.write('{},{},{},{},{},{}\n'.format(
+                            incorrect_indices[i], 
+                            incorrect_predictions[i], 
+                            incorrect_true_labels[i], 
+                            incorrect_strategies[i],
+                            strategy_name,
+                            incorrect_texts[i].replace(',', ';')  # Replace commas to avoid CSV issues
+                        ))
+                print(f'Recorded {len(incorrect_indices)} incorrect predictions in {self.fp_incorrect}')
 
+        
         # Get accuracy score overall
         overall_accuracy = round(np.sum(np.array(predictions) == np.array(true_labels)) / len(true_labels)  * 100, 1)
         if str_ in ['Valid', 'Test']:
